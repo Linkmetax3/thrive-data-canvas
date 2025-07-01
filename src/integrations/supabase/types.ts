@@ -183,6 +183,7 @@ export type Database = {
           payment_terms: number | null
           phone: string | null
           tags: string[] | null
+          total_purchases: number | null
           total_spent: number | null
           updated_at: string
         }
@@ -200,6 +201,7 @@ export type Database = {
           payment_terms?: number | null
           phone?: string | null
           tags?: string[] | null
+          total_purchases?: number | null
           total_spent?: number | null
           updated_at?: string
         }
@@ -217,6 +219,7 @@ export type Database = {
           payment_terms?: number | null
           phone?: string | null
           tags?: string[] | null
+          total_purchases?: number | null
           total_spent?: number | null
           updated_at?: string
         }
@@ -461,6 +464,69 @@ export type Database = {
         }
         Relationships: []
       }
+      invoices: {
+        Row: {
+          business_id: string
+          created_at: string
+          customer_id: string | null
+          customer_name: string
+          due_date: string | null
+          id: string
+          invoice_number: string
+          issue_date: string
+          status: string
+          subtotal: number
+          tax: number
+          total: number
+          updated_at: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          customer_id?: string | null
+          customer_name: string
+          due_date?: string | null
+          id?: string
+          invoice_number: string
+          issue_date: string
+          status?: string
+          subtotal?: number
+          tax?: number
+          total?: number
+          updated_at?: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          customer_id?: string | null
+          customer_name?: string
+          due_date?: string | null
+          id?: string
+          invoice_number?: string
+          issue_date?: string
+          status?: string
+          subtotal?: number
+          tax?: number
+          total?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invoices_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invoices_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       organization_users: {
         Row: {
           avatar_url: string | null
@@ -606,7 +672,10 @@ export type Database = {
           email: string | null
           id: string
           last_order: string | null
+          last_payment_date: string | null
           name: string
+          outstanding_balance: number | null
+          payment_details: Json | null
           phone: string | null
           rating: number | null
           total_spent: number | null
@@ -620,7 +689,10 @@ export type Database = {
           email?: string | null
           id?: string
           last_order?: string | null
+          last_payment_date?: string | null
           name: string
+          outstanding_balance?: number | null
+          payment_details?: Json | null
           phone?: string | null
           rating?: number | null
           total_spent?: number | null
@@ -634,7 +706,10 @@ export type Database = {
           email?: string | null
           id?: string
           last_order?: string | null
+          last_payment_date?: string | null
           name?: string
+          outstanding_balance?: number | null
+          payment_details?: Json | null
           phone?: string | null
           rating?: number | null
           total_spent?: number | null

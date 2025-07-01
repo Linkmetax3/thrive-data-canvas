@@ -6,225 +6,242 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { X } from 'lucide-react';
 import { useCreateTransaction } from '@/hooks/useCreateTransaction';
-import type { Employee } from '@/types/database';
+import { useEmployees } from '@/hooks/useEmployees';
+import { toast } from '@/hooks/use-toast';
+import { DollarSign } from 'lucide-react';
+import type { BusinessWithAll } from '@/types/database';
 
 interface CostTrackingFormProps {
-  employees: Employee[];
+  selectedBusiness: BusinessWithAll;
   onClose: () => void;
-  onSave?: () => void;
 }
 
-export const CostTrackingForm = ({ employees, onClose, onSave }: CostTrackingFormProps) => {
+export const CostTrackingForm = ({ selectedBusiness, onClose }: CostTrackingFormProps) => {
   const [formData, setFormData] = useState({
-    employee_id: '',
-    cost_type: 'salary' as 'salary' | 'wages' | 'benefits' | 'bonus' | 'overtime',
+    employeeId: '',
+    costType: 'salary' as 'salary' | 'bonus' | 'benefits' | 'overtime',
     amount: 0,
-    hours_worked: 0,
+    hoursWorked: 0,
+    hourlyRate: 0,
     description: '',
-    date: new Date().toISOString().split('T')[0],
-    payment_method: 'bank_transfer' as const
+    date: new Date().toISOString().split('T')[0]
   });
 
-  const createTransactionMutation = useCreateTransaction();
-  const selectedEmployee = employees.find(emp => emp.id === formData.employee_id);
-
-  const calculateAmount = () => {
-    if (!selectedEmployee) return 0;
-    
-    if (formData.cost_type === 'wages' && formData.hours_worked > 0) {
-      return (selectedEmployee.hourly_rate || 0) * formData.hours_worked;
-    }
-    
-    return formData.amount;
-  };
+  const businessId = selectedBusiness !== 'All' ? selectedBusiness.id : '';
+  const { data: employees = [] } = useEmployees(businessId);
+  const createTransaction = useCreateTransaction();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (!businessId) {
+      toast({
+        title: "Error",
+        description: "Please select a specific business to track costs.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!formData.employeeId) {
+      toast({
+        title: "Error",
+        description: "Please select an employee.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const selectedEmployee = employees.find(emp => emp.id === formData.employeeId);
     if (!selectedEmployee) {
-      console.error('No employee selected');
+      toast({
+        title: "Error",
+        description: "Selected employee not found.",
+        variant: "destructive",
+      });
       return;
     }
-
-    const finalAmount = calculateAmount();
-    if (finalAmount <= 0) {
-      console.error('Amount must be greater than 0');
-      return;
-    }
-
-    console.log('Submitting employee cost transaction with data:', {
-      selectedEmployee,
-      formData,
-      finalAmount
-    });
 
     try {
       const transactionData = {
         date: formData.date,
-        business_id: selectedEmployee.business_id,
-        type: 'salary' as const,
-        amount: finalAmount,
-        description: formData.description || `${formData.cost_type} payment for ${selectedEmployee.name}`,
+        business_id: businessId,
+        type: 'employee_cost' as const,
+        amount: formData.amount,
+        description: formData.description || `${formData.costType} payment`,
         customer_name: selectedEmployee.name,
-        payment_method: formData.payment_method,
+        payment_method: 'bank_transfer' as const,
         payment_status: 'paid' as const,
-        employee_id: selectedEmployee.id,
+        employee_id: formData.employeeId,
         employee_name: selectedEmployee.name,
-        cost_type: formData.cost_type,
-        hours_worked: formData.cost_type === 'wages' ? formData.hours_worked : null,
-        hourly_rate: formData.cost_type === 'wages' ? selectedEmployee.hourly_rate : null
+        cost_type: formData.costType,
+        hours_worked: formData.hoursWorked > 0 ? formData.hoursWorked : null,
+        hourly_rate: formData.hourlyRate > 0 ? formData.hourlyRate : null,
       };
 
-      console.log('Transaction data to be created:', transactionData);
-
-      await createTransactionMutation.mutateAsync(transactionData);
+      await createTransaction.mutateAsync(transactionData);
       
-      if (onSave) {
-        onSave();
-      }
+      toast({
+        title: "Success",
+        description: "Employee cost recorded successfully.",
+      });
+      
       onClose();
     } catch (error) {
-      console.error('Error creating employee cost transaction:', error);
+      console.error('Error recording employee cost:', error);
+      toast({
+        title: "Error",
+        description: "Failed to record employee cost. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
+  const calculateTotalAmount = () => {
+    if (formData.costType === 'overtime' && formData.hoursWorked > 0 && formData.hourlyRate > 0) {
+      return formData.hoursWorked * formData.hourlyRate;
+    }
+    return formData.amount;
+  };
+
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <Card className="w-full max-w-lg mx-4">
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Record Employee Cost</CardTitle>
-          <Button variant="ghost" size="sm" onClick={onClose}>
-            <X size={16} />
-          </Button>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <Label htmlFor="employee">Employee</Label>
-              <Select
-                value={formData.employee_id}
-                onValueChange={(value) => setFormData(prev => ({ ...prev, employee_id: value }))}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select employee" />
-                </SelectTrigger>
-                <SelectContent>
-                  {employees.map((employee) => (
-                    <SelectItem key={employee.id} value={employee.id}>
-                      {employee.name} - {employee.position}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+    <Card className="w-full max-w-md">
+      <CardHeader>
+        <CardTitle className="flex items-center space-x-2">
+          <DollarSign size={20} />
+          <span>Track Employee Cost</span>
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <Label htmlFor="employee">Employee *</Label>
+            <Select 
+              value={formData.employeeId} 
+              onValueChange={(value) => setFormData(prev => ({ ...prev, employeeId: value }))}
+              required
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select employee" />
+              </SelectTrigger>
+              <SelectContent>
+                {employees.map((employee) => (
+                  <SelectItem key={employee.id} value={employee.id}>
+                    {employee.name} - {employee.position || 'No position'}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-            <div>
-              <Label htmlFor="costType">Cost Type</Label>
-              <Select
-                value={formData.cost_type}
-                onValueChange={(value) => setFormData(prev => ({ ...prev, cost_type: value as typeof formData.cost_type }))}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="salary">Salary</SelectItem>
-                  <SelectItem value="wages">Wages</SelectItem>
-                  <SelectItem value="benefits">Benefits</SelectItem>
-                  <SelectItem value="bonus">Bonus</SelectItem>
-                  <SelectItem value="overtime">Overtime</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+          <div>
+            <Label htmlFor="costType">Cost Type *</Label>
+            <Select
+              value={formData.costType}
+              onValueChange={(value: 'salary' | 'bonus' | 'benefits' | 'overtime') => 
+                setFormData(prev => ({ ...prev, costType: value }))
+              }
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="salary">Salary</SelectItem>
+                <SelectItem value="bonus">Bonus</SelectItem>
+                <SelectItem value="benefits">Benefits</SelectItem>
+                <SelectItem value="overtime">Overtime</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
-            <div>
-              <Label htmlFor="date">Date</Label>
-              <Input
-                id="date"
-                type="date"
-                value={formData.date}
-                onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
-                required
-              />
-            </div>
-
-            {formData.cost_type === 'wages' && selectedEmployee && (
+          {formData.costType === 'overtime' ? (
+            <div className="grid grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="hoursWorked">Hours Worked</Label>
                 <Input
                   id="hoursWorked"
                   type="number"
-                  value={formData.hours_worked}
-                  onChange={(e) => setFormData(prev => ({ ...prev, hours_worked: Number(e.target.value) }))}
-                  min="0"
                   step="0.5"
+                  value={formData.hoursWorked || ''}
+                  onChange={(e) => setFormData(prev => ({ 
+                    ...prev, 
+                    hoursWorked: parseFloat(e.target.value) || 0,
+                    amount: calculateTotalAmount()
+                  }))}
+                  placeholder="0"
                 />
-                {formData.hours_worked > 0 && (
-                  <p className="text-sm text-slate-600 mt-1">
-                    Calculated amount: R{((selectedEmployee.hourly_rate || 0) * formData.hours_worked).toFixed(2)}
-                  </p>
-                )}
               </div>
-            )}
-
-            {formData.cost_type !== 'wages' && (
               <div>
-                <Label htmlFor="amount">Amount (R)</Label>
+                <Label htmlFor="hourlyRate">Hourly Rate</Label>
                 <Input
-                  id="amount"
+                  id="hourlyRate"
                   type="number"
-                  value={formData.amount}
-                  onChange={(e) => setFormData(prev => ({ ...prev, amount: Number(e.target.value) }))}
-                  min="0"
                   step="0.01"
-                  required
+                  value={formData.hourlyRate || ''}
+                  onChange={(e) => setFormData(prev => ({ 
+                    ...prev, 
+                    hourlyRate: parseFloat(e.target.value) || 0,
+                    amount: calculateTotalAmount()
+                  }))}
+                  placeholder="0.00"
                 />
               </div>
-            )}
-
-            <div>
-              <Label htmlFor="paymentMethod">Payment Method</Label>
-              <Select
-                value={formData.payment_method}
-                onValueChange={(value) => setFormData(prev => ({ ...prev, payment_method: value as any }))}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
-                  <SelectItem value="cash">Cash</SelectItem>
-                  <SelectItem value="card">Card</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
-
+          ) : (
             <div>
-              <Label htmlFor="description">Description (Optional)</Label>
-              <Textarea
-                id="description"
-                value={formData.description}
-                onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                placeholder="Additional notes about this payment..."
+              <Label htmlFor="amount">Amount *</Label>
+              <Input
+                id="amount"
+                type="number"
+                step="0.01"
+                value={formData.amount || ''}
+                onChange={(e) => setFormData(prev => ({ ...prev, amount: parseFloat(e.target.value) || 0 }))}
+                placeholder="0.00"
+                required
               />
             </div>
+          )}
 
-            <div className="flex justify-end space-x-2 pt-4">
-              <Button type="button" variant="outline" onClick={onClose}>
-                Cancel
-              </Button>
-              <Button 
-                type="submit" 
-                disabled={!formData.employee_id || createTransactionMutation.isPending}
-              >
-                {createTransactionMutation.isPending ? 'Recording...' : 'Record Cost'}
-              </Button>
+          {formData.costType === 'overtime' && formData.hoursWorked > 0 && formData.hourlyRate > 0 && (
+            <div className="p-3 bg-slate-50 rounded-lg">
+              <div className="text-sm text-slate-600">Total Amount:</div>
+              <div className="text-lg font-semibold">R{calculateTotalAmount().toFixed(2)}</div>
             </div>
-          </form>
-        </CardContent>
-      </Card>
-    </div>
+          )}
+
+          <div>
+            <Label htmlFor="date">Date *</Label>
+            <Input
+              id="date"
+              type="date"
+              value={formData.date}
+              onChange={(e) => setFormData(prev => ({ ...prev, date: e.target.value }))}
+              required
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="description">Description</Label>
+            <Textarea
+              id="description"
+              value={formData.description}
+              onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+              placeholder="Optional description..."
+              rows={3}
+            />
+          </div>
+
+          <div className="flex justify-end space-x-2">
+            <Button type="button" variant="outline" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={createTransaction.isPending}>
+              {createTransaction.isPending ? 'Recording...' : 'Record Cost'}
+            </Button>
+          </div>
+        </form>
+      </CardContent>
+    </Card>
   );
 };

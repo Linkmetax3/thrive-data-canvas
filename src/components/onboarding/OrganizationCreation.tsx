@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Building2, ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Building, Plus } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
@@ -15,9 +16,9 @@ interface OrganizationCreationProps {
 }
 
 export const OrganizationCreation = ({ onComplete, onBack }: OrganizationCreationProps) => {
-  const [step, setStep] = useState(1);
+  const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
-  const [orgData, setOrgData] = useState({
+  const [organizationData, setOrganizationData] = useState({
     name: '',
     description: ''
   });
@@ -27,88 +28,51 @@ export const OrganizationCreation = ({ onComplete, onBack }: OrganizationCreatio
     description: ''
   });
 
-  const businessTypes = [
-    'Agriculture',
-    'Food & Beverage', 
-    'Technology',
-    'Manufacturing',
-    'Retail',
-    'Services',
-    'Healthcare',
-    'Education',
-    'Finance',
-    'Real Estate',
-    'Transportation',
-    'Other'
-  ];
-
-  const handleCreateOrganization = async () => {
-    if (!orgData.name.trim()) {
-      toast({
-        title: "Error",
-        description: "Organization name is required.",
-        variant: "destructive",
-      });
-      return;
-    }
-    setStep(2);
-  };
-
-  const handleComplete = async () => {
-    if (!businessData.name.trim() || !businessData.type.trim()) {
-      toast({
-        title: "Error",
-        description: "Business name and type are required.",
-        variant: "destructive",
-      });
-      return;
-    }
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
 
     setIsLoading(true);
-    
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('User not authenticated');
-
-      // Create organization
-      const { data: orgResult, error: orgError } = await supabase.rpc(
-        'create_organization_with_owner',
-        {
-          p_name: orgData.name,
+      // Create organization using the database function
+      const { data: orgResult, error: orgError } = await supabase
+        .rpc('create_organization_with_owner', {
+          p_name: organizationData.name,
           p_owner_id: user.id
-        }
-      );
+        });
 
       if (orgError) throw orgError;
 
-      // Create business
-      const { data: business, error: businessError } = await supabase
+      // Type assertion to handle the Json type
+      const organization = orgResult as unknown as { id: string; name: string; owner_id: string; created_at: string };
+
+      // Update organization description if provided
+      if (organizationData.description) {
+        const { error: updateError } = await supabase
+          .from('organizations')
+          .update({ description: organizationData.description })
+          .eq('id', organization.id);
+
+        if (updateError) {
+          console.error('Error updating organization description:', updateError);
+        }
+      }
+
+      // Create the first business
+      const { error: businessError } = await supabase
         .from('businesses')
         .insert({
           name: businessData.name,
           type: businessData.type,
           description: businessData.description,
-          organization_id: orgResult.id
-        })
-        .select()
-        .single();
+          organization_id: organization.id
+        });
 
       if (businessError) throw businessError;
 
-      // Add user to business_users as admin
-      const { error: businessUserError } = await supabase
-        .from('business_users')
-        .insert({
-          user_id: user.id,
-          business_id: business.id,
-          role: 'admin'
-        });
-
-      if (businessUserError) throw businessUserError;
-
       toast({
         title: "Success!",
-        description: "Your organization and business have been created successfully.",
+        description: "Your organization and first business have been created successfully.",
       });
 
       onComplete();
@@ -126,121 +90,108 @@ export const OrganizationCreation = ({ onComplete, onBack }: OrganizationCreatio
 
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <div className="flex items-center space-x-3">
-            <Button variant="ghost" size="sm" onClick={step === 1 ? onBack : () => setStep(1)}>
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <div className="flex-1">
-              <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-blue-100">
-                <Building2 className="h-6 w-6 text-blue-600" />
-              </div>
-              <CardTitle className="text-center">
-                {step === 1 ? 'Create Your Organization' : 'Create Your First Business'}
-              </CardTitle>
-              <p className="text-sm text-slate-600 text-center mt-2">
-                Step {step} of 2
-              </p>
-            </div>
+      <div className="w-full max-w-2xl">
+        <div className="mb-8">
+          <Button
+            variant="ghost"
+            onClick={onBack}
+            className="mb-4 flex items-center space-x-2"
+          >
+            <ArrowLeft size={16} />
+            <span>Back</span>
+          </Button>
+          
+          <div className="text-center">
+            <h1 className="text-3xl font-bold text-slate-900 mb-2">Create Your Organization</h1>
+            <p className="text-slate-600">Set up your organization and create your first business</p>
           </div>
-        </CardHeader>
-        
-        <CardContent>
-          {step === 1 ? (
-            <div className="space-y-4">
-              <div className="space-y-2">
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-8">
+          {/* Organization Details */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <Building size={20} />
+                <span>Organization Details</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
                 <Label htmlFor="orgName">Organization Name *</Label>
                 <Input
                   id="orgName"
-                  type="text"
-                  value={orgData.name}
-                  onChange={(e) => setOrgData(prev => ({ ...prev, name: e.target.value }))}
-                  placeholder="Enter your organization name"
+                  value={organizationData.name}
+                  onChange={(e) => setOrganizationData(prev => ({ ...prev, name: e.target.value }))}
+                  placeholder="e.g., Smith Agricultural Enterprises"
                   required
                 />
               </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="orgDescription">Description</Label>
+              <div>
+                <Label htmlFor="orgDescription">Organization Description</Label>
                 <Textarea
                   id="orgDescription"
-                  value={orgData.description}
-                  onChange={(e) => setOrgData(prev => ({ ...prev, description: e.target.value }))}
-                  placeholder="Brief description of your organization"
+                  value={organizationData.description}
+                  onChange={(e) => setOrganizationData(prev => ({ ...prev, description: e.target.value }))}
+                  placeholder="Brief description of your organization..."
                   rows={3}
                 />
               </div>
-              
-              <Button 
-                onClick={handleCreateOrganization}
-                className="w-full"
-                disabled={!orgData.name.trim()}
-              >
-                Next: Create Business
-              </Button>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <div className="space-y-2">
+            </CardContent>
+          </Card>
+
+          {/* First Business */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <Plus size={20} />
+                <span>Your First Business</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
                 <Label htmlFor="businessName">Business Name *</Label>
                 <Input
                   id="businessName"
-                  type="text"
                   value={businessData.name}
                   onChange={(e) => setBusinessData(prev => ({ ...prev, name: e.target.value }))}
-                  placeholder="Enter your business name"
+                  placeholder="e.g., Smith Family Farm"
                   required
                 />
               </div>
-              
-              <div className="space-y-2">
+              <div>
                 <Label htmlFor="businessType">Business Type *</Label>
-                <select
+                <Input
                   id="businessType"
                   value={businessData.type}
                   onChange={(e) => setBusinessData(prev => ({ ...prev, type: e.target.value }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="e.g., Crop Production, Livestock, Mixed Farming"
                   required
-                >
-                  <option value="">Select business type</option>
-                  {businessTypes.map((type) => (
-                    <option key={type} value={type}>
-                      {type}
-                    </option>
-                  ))}
-                </select>
+                />
               </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="businessDescription">Description</Label>
+              <div>
+                <Label htmlFor="businessDescription">Business Description</Label>
                 <Textarea
                   id="businessDescription"
                   value={businessData.description}
                   onChange={(e) => setBusinessData(prev => ({ ...prev, description: e.target.value }))}
-                  placeholder="Brief description of your business"
+                  placeholder="What does this business do?"
                   rows={3}
                 />
               </div>
-              
-              <Button 
-                onClick={handleComplete}
-                className="w-full"
-                disabled={isLoading || !businessData.name.trim() || !businessData.type.trim()}
-              >
-                {isLoading ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-                    Creating...
-                  </>
-                ) : (
-                  'Complete Setup'
-                )}
-              </Button>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+
+          <div className="flex justify-end space-x-4">
+            <Button type="button" variant="outline" onClick={onBack} disabled={isLoading}>
+              Back
+            </Button>
+            <Button type="submit" disabled={isLoading}>
+              {isLoading ? 'Creating...' : 'Create Organization'}
+            </Button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 };

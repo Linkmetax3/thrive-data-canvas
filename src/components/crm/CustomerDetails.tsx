@@ -130,7 +130,7 @@ export const CustomerDetails = ({ customer, isOpen, onClose }: CustomerDetailsPr
                       </div>
                       <div className="text-right">
                         <Badge 
-                          variant={transaction.payment_status === 'completed' ? 'default' : 'secondary'}
+                          variant={transaction.payment_status === 'paid' ? 'default' : 'secondary'}
                           className="text-xs"
                         >
                           {transaction.payment_status || 'pending'}
