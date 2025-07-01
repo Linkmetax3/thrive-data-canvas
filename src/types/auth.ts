@@ -8,10 +8,17 @@ export interface User {
   role: UserRole;
 }
 
+export interface OnboardingStatus {
+  needsOnboarding: boolean;
+  hasOrganizations: boolean;
+  isMember: boolean;
+}
+
 export interface AuthContext {
   user: any | null; // Using Supabase User type
   login: (email: string, password: string) => Promise<boolean>;
   signUp: (email: string, password: string, fullName: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
   isLoading: boolean;
+  checkUserOnboardingStatus: (userId: string) => Promise<OnboardingStatus>;
 }

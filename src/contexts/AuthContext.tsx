@@ -124,13 +124,44 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     await supabase.auth.signOut();
   };
 
+  // Check if user needs onboarding
+  const checkUserOnboardingStatus = async (userId: string) => {
+    try {
+      // Check if user is part of any organization
+      const { data: orgUsers, error: orgError } = await supabase
+        .from('organization_users')
+        .select('*')
+        .eq('user_id', userId);
+
+      if (orgError) throw orgError;
+
+      // Check if user owns any organization
+      const { data: ownedOrgs, error: ownedError } = await supabase
+        .from('organizations')
+        .select('*')
+        .eq('owner_id', userId);
+
+      if (ownedError) throw ownedError;
+
+      return {
+        needsOnboarding: !orgUsers?.length && !ownedOrgs?.length,
+        hasOrganizations: (ownedOrgs?.length || 0) > 0,
+        isMember: (orgUsers?.length || 0) > 0
+      };
+    } catch (error) {
+      console.error('Error checking onboarding status:', error);
+      return { needsOnboarding: true, hasOrganizations: false, isMember: false };
+    }
+  };
+
   return (
     <AuthContextObj.Provider value={{ 
       user, 
       login, 
       logout, 
       isLoading,
-      signUp 
+      signUp,
+      checkUserOnboardingStatus
     }}>
       {children}
     </AuthContextObj.Provider>

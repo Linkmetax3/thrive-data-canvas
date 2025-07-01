@@ -9,12 +9,63 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      business_access_requests: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          business_id: string
+          created_at: string | null
+          id: string
+          requested_role: Database["public"]["Enums"]["user_role"]
+          requester_email: string
+          requester_message: string | null
+          requester_name: string | null
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          business_id: string
+          created_at?: string | null
+          id?: string
+          requested_role?: Database["public"]["Enums"]["user_role"]
+          requester_email: string
+          requester_message?: string | null
+          requester_name?: string | null
+          status?: string
+          updated_at?: string | null
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          business_id?: string
+          created_at?: string | null
+          id?: string
+          requested_role?: Database["public"]["Enums"]["user_role"]
+          requester_email?: string
+          requester_message?: string | null
+          requester_name?: string | null
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_access_requests_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       business_users: {
         Row: {
           business_id: string
           created_at: string
           id: string
           role: Database["public"]["Enums"]["user_role"]
+          updated_at: string
           user_id: string
         }
         Insert: {
@@ -22,6 +73,7 @@ export type Database = {
           created_at?: string
           id?: string
           role?: Database["public"]["Enums"]["user_role"]
+          updated_at?: string
           user_id: string
         }
         Update: {
@@ -29,6 +81,7 @@ export type Database = {
           created_at?: string
           id?: string
           role?: Database["public"]["Enums"]["user_role"]
+          updated_at?: string
           user_id?: string
         }
         Relationships: [
@@ -47,7 +100,7 @@ export type Database = {
           description: string | null
           id: string
           name: string
-          owner_id: string
+          organization_id: string
           type: string
           updated_at: string
         }
@@ -56,7 +109,7 @@ export type Database = {
           description?: string | null
           id?: string
           name: string
-          owner_id: string
+          organization_id: string
           type: string
           updated_at?: string
         }
@@ -65,11 +118,19 @@ export type Database = {
           description?: string | null
           id?: string
           name?: string
-          owner_id?: string
+          organization_id?: string
           type?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "businesses_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       compliance_items: {
         Row: {
@@ -105,15 +166,7 @@ export type Database = {
           title?: string
           updated_at?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "compliance_items_business_id_fkey"
-            columns: ["business_id"]
-            isOneToOne: false
-            referencedRelation: "businesses"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       customers: {
         Row: {
@@ -130,7 +183,6 @@ export type Database = {
           payment_terms: number | null
           phone: string | null
           tags: string[] | null
-          total_purchases: number | null
           total_spent: number | null
           updated_at: string
         }
@@ -148,7 +200,6 @@ export type Database = {
           payment_terms?: number | null
           phone?: string | null
           tags?: string[] | null
-          total_purchases?: number | null
           total_spent?: number | null
           updated_at?: string
         }
@@ -166,7 +217,6 @@ export type Database = {
           payment_terms?: number | null
           phone?: string | null
           tags?: string[] | null
-          total_purchases?: number | null
           total_spent?: number | null
           updated_at?: string
         }
@@ -281,13 +331,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "event_checklists_business_id_fkey"
-            columns: ["business_id"]
-            isOneToOne: false
-            referencedRelation: "businesses"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "event_checklists_event_id_fkey"
             columns: ["event_id"]
             isOneToOne: false
@@ -336,12 +379,51 @@ export type Database = {
           type?: string
           updated_at?: string
         }
+        Relationships: []
+      }
+      invites: {
+        Row: {
+          created_at: string
+          created_by: string
+          email: string
+          expires_at: string
+          id: string
+          invite_code: string
+          organization_id: string
+          role: Database["public"]["Enums"]["user_role"]
+          used_at: string | null
+          used_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          email: string
+          expires_at: string
+          id?: string
+          invite_code: string
+          organization_id: string
+          role: Database["public"]["Enums"]["user_role"]
+          used_at?: string | null
+          used_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          email?: string
+          expires_at?: string
+          id?: string
+          invite_code?: string
+          organization_id?: string
+          role?: Database["public"]["Enums"]["user_role"]
+          used_at?: string | null
+          used_by?: string | null
+        }
         Relationships: [
           {
-            foreignKeyName: "events_business_id_fkey"
-            columns: ["business_id"]
+            foreignKeyName: "invites_organization_id_fkey"
+            columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "businesses"
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
@@ -377,154 +459,133 @@ export type Database = {
           unit_price?: number
           updated_at?: string
         }
+        Relationships: []
+      }
+      organization_users: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          email: string | null
+          full_name: string | null
+          id: string
+          organization_id: string
+          role: Database["public"]["Enums"]["user_role"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          organization_id: string
+          role?: Database["public"]["Enums"]["user_role"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          organization_id?: string
+          role?: Database["public"]["Enums"]["user_role"]
+          updated_at?: string
+          user_id?: string
+        }
         Relationships: [
           {
-            foreignKeyName: "invoice_items_invoice_id_fkey"
-            columns: ["invoice_id"]
+            foreignKeyName: "organization_users_organization_id_fkey"
+            columns: ["organization_id"]
             isOneToOne: false
-            referencedRelation: "invoices"
+            referencedRelation: "organizations"
             referencedColumns: ["id"]
           },
         ]
       }
-      invoices: {
+      organizations: {
         Row: {
-          business_id: string
           created_at: string
-          customer_id: string | null
-          customer_name: string
-          due_date: string | null
+          description: string | null
           id: string
-          invoice_number: string
-          issue_date: string
-          status: string
-          subtotal: number
-          tax: number
-          total: number
+          name: string
+          owner_id: string
           updated_at: string
         }
         Insert: {
-          business_id: string
           created_at?: string
-          customer_id?: string | null
-          customer_name: string
-          due_date?: string | null
+          description?: string | null
           id?: string
-          invoice_number: string
-          issue_date: string
-          status?: string
-          subtotal?: number
-          tax?: number
-          total?: number
+          name: string
+          owner_id: string
           updated_at?: string
         }
         Update: {
-          business_id?: string
           created_at?: string
-          customer_id?: string | null
-          customer_name?: string
-          due_date?: string | null
+          description?: string | null
           id?: string
-          invoice_number?: string
-          issue_date?: string
-          status?: string
-          subtotal?: number
-          tax?: number
-          total?: number
+          name?: string
+          owner_id?: string
           updated_at?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "invoices_business_id_fkey"
-            columns: ["business_id"]
-            isOneToOne: false
-            referencedRelation: "businesses"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "invoices_customer_id_fkey"
-            columns: ["customer_id"]
-            isOneToOne: false
-            referencedRelation: "customers"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       products: {
         Row: {
           business_id: string
           category: string | null
-          conversion_factor: number | null
           cost: number
           created_at: string
           current_stock: number | null
           description: string | null
           expiry_date: string | null
           id: string
-          is_bulk_item: boolean | null
           markup_percentage: number | null
           max_stock: number | null
           min_stock_level: number | null
           name: string
-          parent_product_id: string | null
           price: number
-          sku: string | null
-          supplier_id: string | null
           supplier_name: string | null
           unit: string | null
           updated_at: string
-          variant_type: string | null
-          variant_value: string | null
         }
         Insert: {
           business_id: string
           category?: string | null
-          conversion_factor?: number | null
           cost: number
           created_at?: string
           current_stock?: number | null
           description?: string | null
           expiry_date?: string | null
           id?: string
-          is_bulk_item?: boolean | null
           markup_percentage?: number | null
           max_stock?: number | null
           min_stock_level?: number | null
           name: string
-          parent_product_id?: string | null
           price: number
-          sku?: string | null
-          supplier_id?: string | null
           supplier_name?: string | null
           unit?: string | null
           updated_at?: string
-          variant_type?: string | null
-          variant_value?: string | null
         }
         Update: {
           business_id?: string
           category?: string | null
-          conversion_factor?: number | null
           cost?: number
           created_at?: string
           current_stock?: number | null
           description?: string | null
           expiry_date?: string | null
           id?: string
-          is_bulk_item?: boolean | null
           markup_percentage?: number | null
           max_stock?: number | null
           min_stock_level?: number | null
           name?: string
-          parent_product_id?: string | null
           price?: number
-          sku?: string | null
-          supplier_id?: string | null
           supplier_name?: string | null
           unit?: string | null
           updated_at?: string
-          variant_type?: string | null
-          variant_value?: string | null
         }
         Relationships: [
           {
@@ -532,101 +593,6 @@ export type Database = {
             columns: ["business_id"]
             isOneToOne: false
             referencedRelation: "businesses"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "products_parent_product_id_fkey"
-            columns: ["parent_product_id"]
-            isOneToOne: false
-            referencedRelation: "products"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "products_supplier_id_fkey"
-            columns: ["supplier_id"]
-            isOneToOne: false
-            referencedRelation: "suppliers"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      profiles: {
-        Row: {
-          avatar_url: string | null
-          created_at: string
-          email: string
-          full_name: string | null
-          id: string
-          updated_at: string
-        }
-        Insert: {
-          avatar_url?: string | null
-          created_at?: string
-          email: string
-          full_name?: string | null
-          id: string
-          updated_at?: string
-        }
-        Update: {
-          avatar_url?: string | null
-          created_at?: string
-          email?: string
-          full_name?: string | null
-          id?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      stock_movements: {
-        Row: {
-          business_id: string
-          created_at: string
-          date: string
-          id: string
-          product_id: string
-          quantity: number
-          reason: string
-          reference: string | null
-          type: string
-          updated_at: string
-        }
-        Insert: {
-          business_id: string
-          created_at?: string
-          date?: string
-          id?: string
-          product_id: string
-          quantity: number
-          reason: string
-          reference?: string | null
-          type: string
-          updated_at?: string
-        }
-        Update: {
-          business_id?: string
-          created_at?: string
-          date?: string
-          id?: string
-          product_id?: string
-          quantity?: number
-          reason?: string
-          reference?: string | null
-          type?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "stock_movements_business_id_fkey"
-            columns: ["business_id"]
-            isOneToOne: false
-            referencedRelation: "businesses"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "stock_movements_product_id_fkey"
-            columns: ["product_id"]
-            isOneToOne: false
-            referencedRelation: "products"
             referencedColumns: ["id"]
           },
         ]
@@ -640,10 +606,7 @@ export type Database = {
           email: string | null
           id: string
           last_order: string | null
-          last_payment_date: string | null
           name: string
-          outstanding_balance: number | null
-          payment_details: Json | null
           phone: string | null
           rating: number | null
           total_spent: number | null
@@ -657,10 +620,7 @@ export type Database = {
           email?: string | null
           id?: string
           last_order?: string | null
-          last_payment_date?: string | null
           name: string
-          outstanding_balance?: number | null
-          payment_details?: Json | null
           phone?: string | null
           rating?: number | null
           total_spent?: number | null
@@ -674,10 +634,7 @@ export type Database = {
           email?: string | null
           id?: string
           last_order?: string | null
-          last_payment_date?: string | null
           name?: string
-          outstanding_balance?: number | null
-          payment_details?: Json | null
           phone?: string | null
           rating?: number | null
           total_spent?: number | null
@@ -715,10 +672,9 @@ export type Database = {
           invoice_date: string | null
           invoice_generated: boolean | null
           invoice_number: string | null
-          payment_method: string | null
-          payment_status: string | null
-          supplier_id: string | null
-          type: string
+          payment_method: Database["public"]["Enums"]["payment_method"] | null
+          payment_status: Database["public"]["Enums"]["payment_status"] | null
+          type: Database["public"]["Enums"]["transaction_type"]
           updated_at: string
           yoco_card_type: string | null
           yoco_fee: number | null
@@ -747,10 +703,9 @@ export type Database = {
           invoice_date?: string | null
           invoice_generated?: boolean | null
           invoice_number?: string | null
-          payment_method?: string | null
-          payment_status?: string | null
-          supplier_id?: string | null
-          type: string
+          payment_method?: Database["public"]["Enums"]["payment_method"] | null
+          payment_status?: Database["public"]["Enums"]["payment_status"] | null
+          type: Database["public"]["Enums"]["transaction_type"]
           updated_at?: string
           yoco_card_type?: string | null
           yoco_fee?: number | null
@@ -779,10 +734,9 @@ export type Database = {
           invoice_date?: string | null
           invoice_generated?: boolean | null
           invoice_number?: string | null
-          payment_method?: string | null
-          payment_status?: string | null
-          supplier_id?: string | null
-          type?: string
+          payment_method?: Database["public"]["Enums"]["payment_method"] | null
+          payment_status?: Database["public"]["Enums"]["payment_status"] | null
+          type?: Database["public"]["Enums"]["transaction_type"]
           updated_at?: string
           yoco_card_type?: string | null
           yoco_fee?: number | null
@@ -812,51 +766,52 @@ export type Database = {
             referencedRelation: "employees"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "transactions_supplier_id_fkey"
-            columns: ["supplier_id"]
-            isOneToOne: false
-            referencedRelation: "suppliers"
-            referencedColumns: ["id"]
-          },
         ]
-      }
-      user_roles: {
-        Row: {
-          created_at: string
-          id: string
-          role: Database["public"]["Enums"]["user_role"]
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          role?: Database["public"]["Enums"]["user_role"]
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          role?: Database["public"]["Enums"]["user_role"]
-          user_id?: string
-        }
-        Relationships: []
       }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      create_organization_with_owner: {
+        Args: { p_name: string; p_owner_id: string }
+        Returns: Json
+      }
       create_self_supplier: {
         Args: { business_id: string; business_name: string }
+        Returns: string
+      }
+      create_test_organization: {
+        Args: { p_name: string; p_owner_id: string }
+        Returns: Json
+      }
+      debug_user_organizations: {
+        Args: { p_user_id: string }
+        Returns: {
+          org_id: string
+          org_name: string
+          user_role: string
+          is_owner: boolean
+          is_member: boolean
+        }[]
+      }
+      generate_invite_code: {
+        Args: Record<PropertyKey, never>
         Returns: string
       }
       user_has_business_access: {
         Args: { business_id: string }
         Returns: boolean
       }
+      user_has_organization_access: {
+        Args: { org_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
+      payment_method: "card" | "cash" | "yoco" | "bank_transfer"
+      payment_status: "paid" | "pending" | "overdue" | "partial"
+      transaction_type: "sale" | "refund" | "expense" | "employee_cost"
       user_role: "owner" | "admin" | "employee"
     }
     CompositeTypes: {
@@ -973,6 +928,9 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      payment_method: ["card", "cash", "yoco", "bank_transfer"],
+      payment_status: ["paid", "pending", "overdue", "partial"],
+      transaction_type: ["sale", "refund", "expense", "employee_cost"],
       user_role: ["owner", "admin", "employee"],
     },
   },
